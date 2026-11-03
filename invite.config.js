@@ -5,10 +5,10 @@ export const invite = {
   eventTitle: "Ring Ceremony",
   tagline: "We're getting engaged",
 
-  bride: "Priya",
-  brideParents: "Daughter of Mr. & Mrs. Sharma",
-  groom: "Rohan",
-  groomParents: "Son of Mr. & Mrs. Mehta",
+  bride: "Jahnvi",
+  brideParents: "Daughter of Mr. & Mrs. Oza",
+  groom: "Harsh",
+  groomParents: "Son of Mr. & Mrs. Prajapati",
 
   // Used for the countdown and "Save the Date" (keep the +05:30 for IST).
   date: "2026-12-13T18:00:00+05:30",
@@ -18,7 +18,7 @@ export const invite = {
   timeLabel: "6:00 PM onwards",
 
   welcome:
-    "With hearts full of joy and the blessings of our elders, we warmly invite you and your family to celebrate the engagement of Priya & Rohan as they exchange rings and begin their journey together. Your presence will make this occasion truly special.",
+    "With hearts full of joy and the blessings of our elders, we warmly invite you and your family to celebrate the engagement of Jahnvi & Harsh as they exchange rings and begin their journey together. Your presence will make this occasion truly special.",
 
   // Optional: put a photo at public/couple.jpg (or set to null to hide).
   photo: "/couple.jpg",
@@ -46,13 +46,20 @@ export const invite = {
   gifts: "Your love, blessings and presence are the greatest gifts we could ever ask for.",
 
   rsvp: {
-    // WhatsApp number with country code, digits only (e.g. "919876543210").
-    // RSVP replies open WhatsApp to this number. Leave "" to just show a thank-you.
-    whatsapp: "",
     deadline: "Kindly respond by December 5, 2026",
   },
 
-  hosts: "With love & blessings — The Sharma Family",
+  // Used by the admin portal (/admin) when sending personal invites on WhatsApp.
+  defaultCountryCode: "91",
+  whatsappMessage: ({ name, link }) =>
+    `Dear ${name},\n\n` +
+    `With great joy, we invite you to the ${invite.eventTitle} of ${invite.bride} & ${invite.groom} 💍\n` +
+    `📅 ${invite.dayLabel}, ${invite.dateLabel} · ${invite.timeLabel}\n` +
+    `📍 ${invite.venue.name}\n\n` +
+    `Please open your invitation here:\n${link}\n\n` +
+    `With love & blessings 🙏`,
+
+  hosts: "With love & blessings — The Oza Family",
 
   // Optional background music: put an mp3 at public/music.mp3 (or set to null).
   music: "/music.mp3",

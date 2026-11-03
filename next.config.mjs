@@ -1,6 +1,5 @@
-/** Static export: `npm run build` writes a plain website to ./out that can be hosted anywhere. */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
   images: { unoptimized: true },
 };
 

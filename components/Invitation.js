@@ -22,7 +22,8 @@ function googleCalendarUrl() {
   return `https://calendar.google.com/calendar/render?${params}`;
 }
 
-export default function Invitation() {
+// `guest` is set on personal links (/i/[id]): { id, name, pax, rsvp }.
+export default function Invitation({ guest = null }) {
   // closed → opening (doors + curtains animating) → open (scrollable)
   const [stage, setStage] = useState("closed");
   const [playing, setPlaying] = useState(false);
@@ -40,6 +41,7 @@ export default function Invitation() {
   const open = () => {
     if (stage !== "closed") return;
     setStage("opening");
+    if (guest) navigator.sendBeacon?.("/api/open", JSON.stringify({ id: guest.id }));
     const audio = audioRef.current;
     if (audio) {
       audio.volume = 0.6;
@@ -63,12 +65,12 @@ export default function Invitation() {
   return (
     <main className="stage" style={{ "--door-pattern": doorPattern, "--grain": paperGrain, "--vine": vinePattern }}>
       <div className="card">
-        {stage !== "open" && <Cover opening={opened} onOpen={open} />}
+        {stage !== "open" && <Cover opening={opened} onOpen={open} guest={guest} />}
 
         <Hero opened={opened} />
 
         <div className="paper vined">
-          <Welcome />
+          <Welcome guest={guest} />
           <SaveTheDate />
           {invite.photo && <Photo />}
           <Countdown />
@@ -77,7 +79,7 @@ export default function Invitation() {
           {invite.dressCode && <DressCode />}
           {invite.transport && <InfoBlock icon="car" title="Transportation" text={invite.transport} />}
           {invite.gifts && <InfoBlock icon="gift" title="Gifts" text={invite.gifts} />}
-          <Rsvp />
+          <Rsvp guest={guest} />
           <Footer />
         </div>
       </div>
@@ -98,7 +100,7 @@ export default function Invitation() {
   );
 }
 
-function Cover({ opening, onOpen }) {
+function Cover({ opening, onOpen, guest }) {
   return (
     <div className={`cover ${opening ? "opening" : ""}`} onClick={onOpen} role="button" tabIndex={0} aria-label="Tap to open the invitation" onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}>
       <div className="door left">
@@ -110,6 +112,11 @@ function Cover({ opening, onOpen }) {
       <div className="seal">
         <Seal initials={initials} />
       </div>
+      {guest && (
+        <p className="cover-dear">
+          <span>Dear {guest.name}</span>
+        </p>
+      )}
       <p className="cover-hint">You are cordially invited</p>
     </div>
   );
@@ -163,11 +170,12 @@ function Section({ title, icon, children, className = "" }) {
   );
 }
 
-function Welcome() {
+function Welcome({ guest }) {
   return (
     <section className="section">
       <Reveal>
         <Divider />
+        {guest && <p className="dear">Dear {guest.name},</p>}
         <p className="welcome">{invite.welcome}</p>
         <Divider />
       </Reveal>
@@ -316,57 +324,92 @@ function InfoBlock({ icon, title, text }) {
   );
 }
 
-function Rsvp() {
-  const [sent, setSent] = useState(false);
+function Rsvp({ guest }) {
+  const previous = guest?.rsvp;
+  const [attending, setAttending] = useState(previous?.attending ?? "");
+  const [status, setStatus] = useState("idle"); // idle | sending | sent
+  const [error, setError] = useState(null);
+  const maxGuests = guest ? Math.max(guest.pax, 1) : 20;
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const lines = [
-      `RSVP · ${invite.bride} & ${invite.groom} ${invite.eventTitle}`,
-      `Name: ${f.get("name")}`,
-      `Attending: ${f.get("attending")}`,
-      f.get("attending") === "Yes, with joy" ? `Guests: ${f.get("guests")}` : null,
-      f.get("message") ? `Message: ${f.get("message")}` : null,
-    ].filter(Boolean);
-    if (invite.rsvp.whatsapp) {
-      window.open(`https://wa.me/${invite.rsvp.whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`, "_blank");
+    setStatus("sending");
+    setError(null);
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: guest?.id,
+          name: f.get("name"),
+          attending,
+          count: f.get("count"),
+          message: f.get("message"),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not send your reply, please try again");
+      setStatus("sent");
+    } catch (err) {
+      setError(err.message);
+      setStatus("idle");
     }
-    setSent(true);
   };
 
   return (
     <Section title="Will you join us?">
       <Reveal delay={120}>
         <p className="note">{invite.rsvp.deadline}</p>
-        {sent ? (
-          <p className="thanks">Thank you! We can&apos;t wait to celebrate with you. 💐</p>
+        {status === "sent" ? (
+          <p className="thanks">
+            {attending === "yes"
+              ? "Thank you! We can't wait to celebrate with you. 💐"
+              : "Thank you for letting us know — you'll be missed. 💐"}
+          </p>
         ) : (
           <form className="rsvp" onSubmit={submit}>
-            <label>
-              Your Name
-              <input name="name" required placeholder="Your full name" autoComplete="name" />
-            </label>
+            {previous && (
+              <p className="note">
+                You replied {previous.attending === "yes" ? `“joyfully attending” for ${previous.count}` : "“can't make it”"}. You can
+                update it below.
+              </p>
+            )}
+            {!guest && (
+              <label>
+                Your Name
+                <input name="name" required placeholder="Your full name" autoComplete="name" maxLength={120} />
+              </label>
+            )}
             <label>
               Will you be attending?
-              <select name="attending" required defaultValue="">
+              <select name="attending" required value={attending} onChange={(e) => setAttending(e.target.value)}>
                 <option value="" disabled>
                   Select…
                 </option>
-                <option>Yes, with joy</option>
-                <option>Sorry, can&apos;t make it</option>
+                <option value="yes">Yes, with joy</option>
+                <option value="no">Sorry, can&apos;t make it</option>
               </select>
             </label>
-            <label>
-              Number of guests
-              <input name="guests" type="number" min="1" max="20" defaultValue="1" />
-            </label>
+            {attending === "yes" && (
+              <label>
+                Number of guests{guest && maxGuests > 1 ? ` (up to ${maxGuests})` : ""}
+                <input
+                  name="count"
+                  type="number"
+                  min="1"
+                  max={maxGuests}
+                  defaultValue={previous?.count || (guest ? maxGuests : 1)}
+                />
+              </label>
+            )}
             <label>
               Message
-              <textarea name="message" rows={3} placeholder="Leave your wishes…" />
+              <textarea name="message" rows={3} placeholder="Leave your wishes…" maxLength={1000} defaultValue={previous?.message || ""} />
             </label>
-            <button type="submit" className="btn">
-              Send RSVP
+            {error && <p className="rsvp-error">{error}</p>}
+            <button type="submit" className="btn" disabled={status === "sending"}>
+              {status === "sending" ? "Sending…" : previous ? "Update RSVP" : "Send RSVP"}
             </button>
           </form>
         )}

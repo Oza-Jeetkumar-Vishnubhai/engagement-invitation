@@ -532,6 +532,32 @@ button { font: inherit; cursor: pointer; }
 .rsvp textarea:focus { border-color: var(--olive); box-shadow: 0 0 0 3px rgba(111, 108, 67, 0.15); }
 .rsvp .btn { justify-self: center; margin-top: 6px; }
 .thanks { font-size: 20px; font-style: italic; color: #5a3424; }
+.rsvp-error { color: #a3352b; font-size: 15px; text-align: center; }
+.rsvp .note { text-align: center; margin: 0; }
+.dear { font-family: var(--script); font-size: 32px; color: #6b4530; margin-bottom: 8px; }
+
+.cover-dear {
+  position: absolute;
+  bottom: calc(11% + 34px);
+  width: 100%;
+  padding: 0 24px;
+  text-align: center;
+  font-family: var(--script);
+  font-size: 34px;
+  color: #fbe9cf;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.4s;
+}
+.cover-dear span {
+  display: inline-block;
+  padding: 2px 18px 6px;
+  border-radius: 18px;
+  background: rgba(70, 68, 38, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  line-height: 1.15;
+}
+.cover.opening .cover-dear { opacity: 0; }
 
 /* ---------- Footer ---------- */
 .footer { padding-bottom: 70px; }
